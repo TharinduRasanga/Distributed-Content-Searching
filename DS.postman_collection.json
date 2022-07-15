@@ -7,20 +7,20 @@
 	},
 	"item": [
 		{
-			"name": "localhost:8090/node/search/name",
+			"name": "search",
 			"request": {
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "localhost:8090/node/search/name",
+					"raw": "localhost:8080/node/search/756",
 					"host": [
 						"localhost"
 					],
-					"port": "8090",
+					"port": "8080",
 					"path": [
 						"node",
 						"search",
-						"name"
+						"756"
 					]
 				}
 			},
@@ -39,11 +39,11 @@
 					"formdata": []
 				},
 				"url": {
-					"raw": "localhost:8090/file/download?fileName=test",
+					"raw": "localhost:8080/file/download?fileName=\"test\"",
 					"host": [
 						"localhost"
 					],
-					"port": "8090",
+					"port": "8080",
 					"path": [
 						"file",
 						"download"
@@ -51,7 +51,7 @@
 					"query": [
 						{
 							"key": "fileName",
-							"value": "test"
+							"value": "\"test\""
 						}
 					]
 				}
@@ -65,17 +65,40 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "test"
+					"raw": "test 756"
 				},
 				"url": {
-					"raw": "localhost:8080/node/publish",
+					"raw": "localhost:8081/node/publish",
 					"host": [
 						"localhost"
 					],
-					"port": "8080",
+					"port": "8081",
 					"path": [
 						"node",
 						"publish"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "unregister",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "localhost:8081/node/unregister",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"node",
+						"unregister"
 					]
 				}
 			},
