@@ -24,7 +24,7 @@ public class NodeService {
     }
 
     public void publishFile(String fileName) {
-        fileManager.addLocalFile(fileName);
+        fileManager.addLocalFile("\"" + fileName + "\"");
         node.publish(fileName);
     }
 

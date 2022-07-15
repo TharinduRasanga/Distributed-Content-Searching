@@ -88,7 +88,7 @@ public class Node {
                     if (localMatching.size() > 0) {
                         StringBuilder fileNames = new StringBuilder();
                         for (String s : localMatching) {
-                            fileNames.append("\"").append(s).append("\" ");
+                            fileNames.append(s).append(" ");
                         }
                         byte[] localData = prependLengthToMessage(
                                 "SEROK " + localMatching.size() + " " + nodeIdentity.getIpAddress()
@@ -111,7 +111,7 @@ public class Node {
                             Set<String> fileNames = entry.getValue();
                             StringBuilder names = new StringBuilder();
                             for (String s : fileNames) {
-                                names.append("\"").append(s).append("\" ");
+                                names.append(s).append(" ");
                             }
                             byte[] localData = prependLengthToMessage(
                                     "SEROK " + localMatching.size() + " " + location[0]
@@ -274,7 +274,7 @@ public class Node {
             try (DatagramSocket serverSocket = new DatagramSocket()) {
                 InetAddress address = InetAddress.getByName(peer.getIpAddress());
                 byte[] receiveData = new byte[1024];
-                String message = prependLengthToMessage("PUBLISH " + fileName + " " + nodeIdentity.getIpAddress() + " " + fileServerPort + " " + nodeIdentity.getPort());
+                String message = prependLengthToMessage("PUBLISH \"" + fileName + "\" " + nodeIdentity.getIpAddress() + " " + fileServerPort + " " + nodeIdentity.getPort());
                 byte[] sendData = message.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
                 log.info("SEND: Publish message to '" + peer + "'");
