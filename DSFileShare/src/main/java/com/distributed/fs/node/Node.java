@@ -143,12 +143,6 @@ public class Node {
                     sendData = processJoinRequest(incomingMessage, response, responseAddress, responsePort);
                 } else if (response.length >= 4 && LEAVE.equals(response[1])) {
                     sendData = processLeaveRequest(incomingMessage, response, responseAddress, responsePort);
-                } else if (response.length >= 4 && RANK.equals(response[1])) {
-
-                } else if (response.length >= 4 && COM.equals(response[1])) {
-
-                } else if (response.length >= 4 && COMRPLY.equals(response[1])) {
-
                 } else if (PUBLISH.equals(response[1])) {
                     sendData = processPublish(incomingMessage, response, responseAddress, responsePort);
                 }
