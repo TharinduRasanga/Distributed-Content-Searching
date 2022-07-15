@@ -115,7 +115,7 @@ public class Node {
                             }
                             byte[] localData = prependLengthToMessage(
                                     "SEROK " + localMatching.size() + " " + location[0]
-                                            + " " + location[1] + " " + fileNames.toString().trim()
+                                            + " " + location[1] + " " + names.toString().trim()
                             ).getBytes();
                             DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
                                     Integer.parseInt(searcherPort));
@@ -362,9 +362,7 @@ public class Node {
                         for (int i = 5; i < 5 + noOfFiles; i++) {
                             SearchResult searchResult = new SearchResult();
                             searchResult.setLocation(host + ":" + port);
-                            searchResult.setFileName(response[i].replace("\"", "")
-                                    .replace("[", "")
-                                    .replace("]", ""));
+                            searchResult.setFileName(response[i].replace("\"", ""));
                             results.add(searchResult);
                         }
                     }

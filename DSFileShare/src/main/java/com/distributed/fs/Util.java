@@ -21,9 +21,7 @@ public class Util {
 
     public static String[] splitIncomingMessage(String incomingMessage) {
         List<String> list = new ArrayList<>();
-        Matcher m = Pattern.compile("([^\"]\\S*|\".+?\")\\s*").matcher(
-                incomingMessage.replace("[", "").replace("]", "")
-        );
+        Matcher m = Pattern.compile("([^\"]\\S*|\".+?\")\\s*").matcher(incomingMessage);
         while (m.find()) {
             list.add(m.group(1));
         }
