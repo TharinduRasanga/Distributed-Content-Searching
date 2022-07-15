@@ -4,6 +4,7 @@ import com.distributed.fs.Constants;
 import com.distributed.fs.dto.SearchResult;
 import com.distributed.fs.filesystem.FileManager;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PreDestroy;
 import java.io.IOException;
@@ -28,6 +29,9 @@ public class Node {
     private final FileManager fileManager;
     
     private final String fileServerPort;
+
+    @Value("${max-hop-count}")
+    private String maxHopCount;
 
     public Node(NodeIdentity bootstrapIdentity, FileManager fileManager, String fileServerPort) {
         this.fileManager = fileManager;
@@ -339,7 +343,7 @@ public class Node {
             try (DatagramSocket serverSocket = new DatagramSocket(searchPort)) {
                 InetAddress address = InetAddress.getByName(peer.getIpAddress());
                 byte[] receiveData = new byte[1024];
-                String searchQuery = "SER " + nodeIdentity.getIpAddress() + " " + searchPort + " " + name + " " + 5;
+                String searchQuery = "SER " + nodeIdentity.getIpAddress() + " " + searchPort + " " + name + " " + maxHopCount;
                 String message = prependLengthToMessage(searchQuery);
                 byte[] sendData = message.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());

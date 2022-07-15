@@ -4,3 +4,5 @@ bootstrap:
 
 server:
     port: 8080
+
+max-hop-count: 5
