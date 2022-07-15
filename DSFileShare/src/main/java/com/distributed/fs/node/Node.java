@@ -98,7 +98,7 @@ public class Node {
         log.info("RECEIVE: publish received from '" + responseAddress + ":" + responsePort +
                 "' as '" + incomingMessage + "'");
         String fileName = response[2];
-        String location = response[3] + ":" + response[4];
+        String location = response[3] + ":" + response[4] + ":" + response[5];
         fileManager.addToFileTable(fileName, location);
         sendData = prependLengthToMessage("PUBLISH OK").getBytes();
         log.info("SENT: publish ok sent to '" + responseAddress + ":" + responsePort +
@@ -110,8 +110,10 @@ public class Node {
         byte[] sendData;
         log.info("RECEIVE: Leave query received from '" + responseAddress + ":" + responsePort +
                 "' as '" + incomingMessage + "'");
-        peers.remove(NodeIdentity.of(responseAddress.getHostAddress(),
-                Integer.parseInt(response[3])));
+        NodeIdentity node = NodeIdentity.of(responseAddress.getHostAddress(),
+                Integer.parseInt(response[3]));
+        peers.remove(node);
+        fileManager.removeFromFileTable(node);
         sendData = prependLengthToMessage("LEAVEOK 0").getBytes();
         return sendData;
     }
@@ -204,7 +206,7 @@ public class Node {
             try (DatagramSocket serverSocket = new DatagramSocket()) {
                 InetAddress address = InetAddress.getByName(peer.getIpAddress());
                 byte[] receiveData = new byte[1024];
-                String message = prependLengthToMessage("PUBLISH " + fileName + " " + nodeIdentity.getIpAddress() + " " + fileServerPort);
+                String message = prependLengthToMessage("PUBLISH " + fileName + " " + nodeIdentity.getIpAddress() + " " + fileServerPort + " " + nodeIdentity.getPort());
                 byte[] sendData = message.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
                 log.info("SEND: Publish message to '" + peer + "'");

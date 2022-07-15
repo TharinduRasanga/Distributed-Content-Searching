@@ -1,5 +1,6 @@
 package com.distributed.fs.filesystem;
 
+import com.distributed.fs.node.NodeIdentity;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -35,4 +36,7 @@ public class FileManager {
         }
     }
 
+    public void removeFromFileTable(NodeIdentity node) {
+        // localhost:fileserverport:udpport
+    }
 }
