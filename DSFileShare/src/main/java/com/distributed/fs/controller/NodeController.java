@@ -23,4 +23,9 @@ public class NodeController {
     public List<String> search(@PathVariable String name) {
         return nodeService.search(name);
     }
+
+    @PostMapping("/unregister")
+    public void unregister() {
+        nodeService.unregister();
+    }
 }

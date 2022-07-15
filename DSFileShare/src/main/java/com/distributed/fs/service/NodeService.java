@@ -25,4 +25,8 @@ public class NodeService {
         fileManager.addLocalFile(fileName);
         node.publish(fileName);
     }
+
+    public void unregister() {
+        node.unregister();
+    }
 }

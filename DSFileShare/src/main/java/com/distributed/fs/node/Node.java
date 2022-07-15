@@ -113,6 +113,7 @@ public class Node {
         NodeIdentity node = NodeIdentity.of(responseAddress.getHostAddress(),
                 Integer.parseInt(response[3]));
         peers.remove(node);
+        //TODO
         fileManager.removeFromFileTable(node);
         sendData = prependLengthToMessage("LEAVEOK 0").getBytes();
         return sendData;
@@ -207,6 +208,27 @@ public class Node {
                 InetAddress address = InetAddress.getByName(peer.getIpAddress());
                 byte[] receiveData = new byte[1024];
                 String message = prependLengthToMessage("PUBLISH " + fileName + " " + nodeIdentity.getIpAddress() + " " + fileServerPort + " " + nodeIdentity.getPort());
+                byte[] sendData = message.getBytes();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
+                log.info("SEND: Publish message to '" + peer + "'");
+                serverSocket.send(sendPacket);
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                serverSocket.receive(receivePacket);
+                String responseMessage = new String(receivePacket.getData()).trim();
+                log.info("RECEIVE: " + responseMessage + " from '" + peer + "'");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void unregister() {
+        //TODO
+        for (NodeIdentity peer : peers) {
+            try (DatagramSocket serverSocket = new DatagramSocket()) {
+                InetAddress address = InetAddress.getByName(peer.getIpAddress());
+                byte[] receiveData = new byte[1024];
+                String message = prependLengthToMessage("PUBLISH " + " " + nodeIdentity.getIpAddress() + " " + fileServerPort + " " + nodeIdentity.getPort());
                 byte[] sendData = message.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
                 log.info("SEND: Publish message to '" + peer + "'");
