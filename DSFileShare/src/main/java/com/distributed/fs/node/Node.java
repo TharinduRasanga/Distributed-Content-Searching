@@ -5,6 +5,7 @@ import com.distributed.fs.dto.SearchResult;
 import com.distributed.fs.filesystem.FileManager;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
@@ -175,10 +176,10 @@ public class Node {
         byte[] sendData;
         log.info("RECEIVE: Leave query received from '" + responseAddress + ":" + responsePort +
                 "' as '" + incomingMessage + "'");
-        NodeIdentity node = NodeIdentity.of(responseAddress.getHostAddress(),
+        NodeIdentity node = NodeIdentity.of(
+                responseAddress.getHostAddress().equals("127.0.0.1") ? "localhost" : responseAddress.getHostAddress(),
                 Integer.parseInt(response[3]));
         peers.remove(node);
-        //TODO
         fileManager.removeFromFileTable(node);
         sendData = prependLengthToMessage("LEAVEOK 0").getBytes();
         return sendData;
@@ -199,7 +200,7 @@ public class Node {
             System.out.println(bootstrapHost);
             DatagramSocket clientSocket = new DatagramSocket();
             byte[] receiveData = new byte[1024];
-            String message = prependLengthToMessage("REG " + nodeIdentity.getIpAddress() + " " + nodeIdentity.getPort() + " " + "test");
+            String message = prependLengthToMessage("REG " + nodeIdentity.getIpAddress() + " " + nodeIdentity.getPort() + " " + nodeIdentity.getName());
             byte[] sendData = message.getBytes();
 
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, bootstrapHost, 55555);
@@ -291,23 +292,43 @@ public class Node {
     }
 
     public void unregister() {
-        //TODO
+        unRegisterFromBootstrapServer();
+
         for (NodeIdentity peer : peers) {
             try (DatagramSocket serverSocket = new DatagramSocket()) {
                 InetAddress address = InetAddress.getByName(peer.getIpAddress());
                 byte[] receiveData = new byte[1024];
-                String message = prependLengthToMessage("PUBLISH " + " " + nodeIdentity.getIpAddress() + " " + fileServerPort + " " + nodeIdentity.getPort());
+                String message = prependLengthToMessage("LEAVE " + nodeIdentity.getIpAddress() + " " + nodeIdentity.getPort());
                 byte[] sendData = message.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
-                log.info("SEND: Publish message to '" + peer + "'");
+                log.info("SEND: Leave message to '" + peer + "'");
                 serverSocket.send(sendPacket);
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                 serverSocket.receive(receivePacket);
                 String responseMessage = new String(receivePacket.getData()).trim();
                 log.info("RECEIVE: " + responseMessage + " from '" + peer + "'");
+                peers = new HashSet<>();
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    @PreDestroy
+    public void unRegisterFromBootstrapServer() {
+        try {
+            InetAddress bootstrapHost = InetAddress.getByName(bootstrapIdentity.getIpAddress());
+            DatagramSocket clientSocket = null;
+            clientSocket = new DatagramSocket();
+            byte[] receiveData = new byte[1024];
+            String message = prependLengthToMessage("UNREG " + nodeIdentity.getIpAddress() + " " + nodeIdentity.getPort() + " " + nodeIdentity.getName());
+            byte[] sendData = message.getBytes();
+
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, bootstrapHost, 55555);
+            log.info("SEND: Bootstrap server unregister message '" + message + "'");
+            clientSocket.send(sendPacket);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 

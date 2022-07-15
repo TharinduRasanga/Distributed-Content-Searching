@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FileManager {
 
     private final Set<String> localFileNames = ConcurrentHashMap.newKeySet();
+
+    // Key  file name value list of locations
+    // location format host:file_server_port:port
     private final Map<String, Set<String>> fileTable = new ConcurrentHashMap<>();
 
     public void addLocalFile(String fileName) {
@@ -36,7 +39,15 @@ public class FileManager {
     }
 
     public void removeFromFileTable(NodeIdentity node) {
-        // localhost:fileserverport:udpport
+        for (Map.Entry<String, Set<String>> entry : fileTable.entrySet()) {
+            Set<String> value = entry.getValue();
+            String removingNodeLocation = node.getIpAddress() + ":" + node.getPort();
+            value.removeIf(val -> {
+                String[] split = val.split(":");
+                String currLocation = split[0] + ":" + split[2];
+                return removingNodeLocation.equals(currLocation);
+            });
+        }
     }
 
     public Set<String> getLocalMatching(String fileName) {
