@@ -5,6 +5,8 @@ import com.distributed.fs.node.Node;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class NodeService {
@@ -17,8 +19,8 @@ public class NodeService {
         this.fileManager = fileManager;
     }
 
-    public List<String> search(String name) {
-        return null;
+    public Map<String, Set<String>> search(String name) {
+        return node.search(name);
     }
 
     public void publishFile(String fileName) {

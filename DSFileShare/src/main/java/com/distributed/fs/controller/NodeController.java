@@ -4,6 +4,8 @@ import com.distributed.fs.service.NodeService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController()
 @RequestMapping("/node")
@@ -20,7 +22,7 @@ public class NodeController {
     }
 
     @GetMapping("/search/{name}")
-    public List<String> search(@PathVariable String name) {
+    public Map<String, Set<String>> search(@PathVariable String name) {
         return nodeService.search(name);
     }
 

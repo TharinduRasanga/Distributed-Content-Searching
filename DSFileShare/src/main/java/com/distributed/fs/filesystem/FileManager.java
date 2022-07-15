@@ -1,11 +1,10 @@
 package com.distributed.fs.filesystem;
 
+import com.distributed.fs.dto.SearchResult;
 import com.distributed.fs.node.NodeIdentity;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -38,5 +37,32 @@ public class FileManager {
 
     public void removeFromFileTable(NodeIdentity node) {
         // localhost:fileserverport:udpport
+    }
+
+    public Set<String> getLocalMatching(String fileName) {
+        Set<String> queriedFileList = new HashSet<>();
+
+        for (String file : localFileNames) {
+            if (file.toLowerCase().matches(".*\\b" + fileName.toLowerCase() + "\\b.*")) {
+                queriedFileList.add(file);
+            }
+        }
+        return queriedFileList;
+    }
+
+    public Set<SearchResult> getPeerMatching(String fileName) {
+        Set<SearchResult> result = new HashSet<>();
+        for (Map.Entry<String, Set<String>> entry : fileTable.entrySet()) {
+            String key = entry.getKey();
+            if (key.toLowerCase().matches(".*\\b" + fileName.toLowerCase() + "\\b.*")) {
+                for (String s : entry.getValue()) {
+                    SearchResult searchResult = new SearchResult();
+                    searchResult.setFileName(key);
+                    searchResult.setLocation(s);
+                    result.add(searchResult);
+                }
+            }
+        }
+        return result;
     }
 }

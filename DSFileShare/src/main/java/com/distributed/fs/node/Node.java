@@ -1,15 +1,16 @@
 package com.distributed.fs.node;
 
 import com.distributed.fs.Constants;
+import com.distributed.fs.dto.SearchResult;
 import com.distributed.fs.filesystem.FileManager;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import static com.distributed.fs.Util.*;
 import static com.distributed.fs.Constants.*;
@@ -55,6 +56,7 @@ public class Node {
 
                 byte[] data = incoming.getData();
                 String incomingMessage = new String(data, 0, incoming.getLength());
+                log.info("income {}", incomingMessage);
 
                 //incomingMessage = 0047 SER 129.82.62.142 5070 "Lord of the rings" 3
 
@@ -65,13 +67,82 @@ public class Node {
                 int responsePort = incoming.getPort();
 
                 if (response.length >= 6 && Constants.SER.equals(response[1])) {
+                    String host = response[2];
+                    String searcherPort = response[3];
+//                    if (NodeIdentity.of(host, Integer.parseInt(searcherPort)).equals(nodeIdentity)) {
+//                        continue;
+//                    }
+                    InetAddress searcherAddress = InetAddress.getByName(host);
+                    String searchFilename = getResourceNameFromSearchQuery(response[4]);
+                    int currentHopsCount = Integer.parseInt(response[5]);
+                    if (currentHopsCount == 0) {
+                        log.info("DROP: Maximum hops reached hence dropping '" + incomingMessage + "'");
+                        continue;
+                    }
+                    Set<String> localMatching = fileManager.getLocalMatching(searchFilename);
+                    Set<SearchResult> peerMatching = fileManager.getPeerMatching(searchFilename);
+
+                    int totalCount = localMatching.size() + peerMatching.size();
+
+                    // Check whether file exist locally
+                    if (localMatching.size() > 0) {
+                        StringBuilder fileNames = new StringBuilder();
+                        for (String s : localMatching) {
+                            fileNames.append("\"").append(s).append("\" ");
+                        }
+                        byte[] localData = prependLengthToMessage(
+                                "SEROK " + localMatching.size() + " " + nodeIdentity.getIpAddress()
+                                        + " " + fileServerPort + " " + fileNames.toString().trim()
+                        ).getBytes();
+                        DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
+                                Integer.parseInt(searcherPort));
+                        serverSocket.send(sendPacket);
+                    }
+
+                    // check whether file is in file table
+                    if (peerMatching.size() > 0) {
+                        Map<String, Set<String>> fileNamesByIp = peerMatching.stream()
+                                .collect(Collectors.groupingBy(
+                                        SearchResult::getLocation,
+                                        Collectors.mapping(SearchResult::getFileName, Collectors.toSet())
+                                ));
+                        for (Map.Entry<String, Set<String>> entry : fileNamesByIp.entrySet()) {
+                            String[] location = entry.getKey().split(":");
+                            Set<String> fileNames = entry.getValue();
+                            StringBuilder names = new StringBuilder();
+                            for (String s : fileNames) {
+                                names.append("\"").append(s).append("\" ");
+                            }
+                            byte[] localData = prependLengthToMessage(
+                                    "SEROK " + localMatching.size() + " " + location[0]
+                                            + " " + location[1] + " " + fileNames.toString().trim()
+                            ).getBytes();
+                            DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
+                                    Integer.parseInt(searcherPort));
+                            serverSocket.send(sendPacket);
+                        }
+                    }
+
+                    // Flood the query to all peers
+                    response[5] = String.valueOf(currentHopsCount - 1);
+                    String updatedSearchQuery = String.join(" ", response);
+
+                    for (NodeIdentity peer : peers) {
+                        try (DatagramSocket peerSocket = new DatagramSocket()) {
+                            byte[] floodData = updatedSearchQuery.getBytes();
+                            DatagramPacket sendPacket = new DatagramPacket(floodData, floodData.length,
+                                    InetAddress.getByName(peer.getIpAddress()), peer.getPort());
+                            log.info("FLOOD: Search query to '" + updatedSearchQuery + "'");
+                            serverSocket.send(sendPacket);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
 
                 } else if (response.length >= 4 && JOIN.equals(response[1])) {
                     sendData = processJoinRequest(incomingMessage, response, responseAddress, responsePort);
                 } else if (response.length >= 4 && LEAVE.equals(response[1])) {
                     sendData = processLeaveRequest(incomingMessage, response, responseAddress, responsePort);
-                } else if (response.length >= 4 && SEROK.equals(response[1])) {
-
                 } else if (response.length >= 4 && RANK.equals(response[1])) {
 
                 } else if (response.length >= 4 && COM.equals(response[1])) {
@@ -193,11 +264,7 @@ public class Node {
     }
 
     private void assignNewIdentity() {
-        int port = 0;
-        try (ServerSocket serverSocket = new ServerSocket(0)) {
-            port = serverSocket.getLocalPort();
-        } catch (IOException e) {
-        }
+        int port = getFreePort();
         this.nodeIdentity = NodeIdentity.of("localhost", port);
     }
 
@@ -213,9 +280,16 @@ public class Node {
                 log.info("SEND: Publish message to '" + peer + "'");
                 serverSocket.send(sendPacket);
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                serverSocket.receive(receivePacket);
-                String responseMessage = new String(receivePacket.getData()).trim();
-                log.info("RECEIVE: " + responseMessage + " from '" + peer + "'");
+                serverSocket.setSoTimeout(2000);
+                try {
+                    serverSocket.receive(receivePacket);
+                    String responseMessage = new String(receivePacket.getData()).trim();
+                    log.info("RECEIVE: " + responseMessage + " from '" + peer + "'");
+                } catch (SocketTimeoutException e) {
+                    e.printStackTrace();
+                }
+
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -241,5 +315,83 @@ public class Node {
                 e.printStackTrace();
             }
         }
+    }
+
+    public Map<String, Set<String>> search(String name) {
+        Set<SearchResult> results = new HashSet<>();
+        for (NodeIdentity peer : peers) {
+            int searchPort = getFreePort();
+            try (DatagramSocket serverSocket = new DatagramSocket(searchPort)) {
+                InetAddress address = InetAddress.getByName(peer.getIpAddress());
+                byte[] receiveData = new byte[1024];
+                String searchQuery = "SER " + nodeIdentity.getIpAddress() + " " + searchPort + " " + name + " " + 5;
+                String message = prependLengthToMessage(searchQuery);
+                byte[] sendData = message.getBytes();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
+                log.info("SEND: Search query '" + message + "'");
+                serverSocket.send(sendPacket);
+
+                long start = System.currentTimeMillis();
+                long end = System.currentTimeMillis();
+                int threshold = 3*1000;
+                serverSocket.setSoTimeout(2000);
+                while (true) {
+                    end = System.currentTimeMillis();
+                    if ((end - start) > threshold) {
+                        break;
+                    }
+                    byte[] buffer = new byte[65536];
+                    DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
+                    try {
+                        serverSocket.receive(incoming);
+                    } catch (SocketTimeoutException e) {
+                        continue;
+                    }
+
+                    byte[] data = incoming.getData();
+                    String incomingMessage = new String(data, 0, incoming.getLength());
+
+                    String[] response = splitIncomingMessage(incomingMessage);
+
+                    log.info("RECEIVE: " + incomingMessage + " from '" + peer + "'");
+
+                    if (SEROK.equals(response[1])) {
+                        int noOfFiles = Integer.parseInt(response[2]);
+                        String host = response[3];
+                        String port = response[4];
+                        for (int i = 5; i < 5 + noOfFiles; i++) {
+                            SearchResult searchResult = new SearchResult();
+                            searchResult.setLocation(host + ":" + port);
+                            searchResult.setFileName(response[i].replace("\"", "")
+                                    .replace("[", "")
+                                    .replace("]", ""));
+                            results.add(searchResult);
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        Set<String> localMatching = fileManager.getLocalMatching(name);
+        if (!localMatching.isEmpty()) {
+            for (String s : localMatching) {
+                SearchResult searchResult = new SearchResult();
+                searchResult.setLocation(nodeIdentity.getIpAddress() + ":" + fileServerPort);
+                searchResult.setFileName(s.replace("\"", ""));
+                results.add(searchResult);
+            }
+        }
+        return results.stream()
+                .collect(
+                        Collectors.groupingBy(
+                                SearchResult::getFileName,
+                                Collectors.mapping(
+                                        SearchResult::getLocation,
+                                        Collectors.toSet()
+                                )
+                        )
+                );
     }
 }

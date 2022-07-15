@@ -2,6 +2,7 @@ package com.distributed.fs;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -32,6 +33,19 @@ public class Util {
         int randContent = random.nextInt(100000000);
         String str = String.valueOf(randContent);
         return str.repeat(1250000);
+    }
+
+    public static String getResourceNameFromSearchQuery(String query) {
+        return query.trim().replaceAll("\"", "");
+    }
+
+    public static int getFreePort() {
+        int port = 0;
+        try (ServerSocket serverSocket = new ServerSocket(0)) {
+            port = serverSocket.getLocalPort();
+        } catch (IOException e) {
+        }
+        return port;
     }
 
 }
