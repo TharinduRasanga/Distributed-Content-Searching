@@ -1,7 +1,10 @@
 package com.distributed.fs;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,6 +25,13 @@ public class Util {
             list.add(m.group(1));
         }
         return list.toArray(new String[list.size()]);
+    }
+
+    public static String createRandomContentToFile() {
+        Random random = new Random();
+        int randContent = random.nextInt(100000000);
+        String str = String.valueOf(randContent);
+        return str.repeat(1250000);
     }
 
 }

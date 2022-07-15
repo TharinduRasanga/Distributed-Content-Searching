@@ -1,13 +1,12 @@
 package com.distributed.fs.node;
 
 import com.distributed.fs.Constants;
+import com.distributed.fs.filesystem.FileManager;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,25 +21,31 @@ public class Node {
     private NodeIdentity bootstrapIdentity;
     private Set<NodeIdentity> peersToConnect = new HashSet<>();
     private Set<NodeIdentity> peers = new HashSet<>();
+    private final ExecutorService executorService;
+    
+    private final FileManager fileManager;
+    
+    private final String fileServerPort;
 
-    public Node(NodeIdentity bootstrapIdentity) {
+    public Node(NodeIdentity bootstrapIdentity, FileManager fileManager, String fileServerPort) {
+        this.fileManager = fileManager;
+        this.fileServerPort = fileServerPort;
         assignNewIdentity();
         this.bootstrapIdentity = bootstrapIdentity;
+        executorService = Executors.newFixedThreadPool(2);
         connectToBootstrapServer();
         listenToIncomingRequests();
         connectToPeers();
     }
 
     private void listenToIncomingRequests() {
-        ExecutorService executorService = Executors.newFixedThreadPool(1);
         executorService.submit(this::listenAndAct);
     }
 
     private void listenAndAct() {
 
         try {
-            DatagramSocket serverSocket;
-            serverSocket = new DatagramSocket(nodeIdentity.getPort());
+            DatagramSocket serverSocket = new DatagramSocket(nodeIdentity.getPort());
             log.info("Started listening on '" + nodeIdentity.getPort() + "' for incoming data...");
 
             while (true) {
@@ -73,6 +78,8 @@ public class Node {
 
                 } else if (response.length >= 4 && COMRPLY.equals(response[1])) {
 
+                } else if (PUBLISH.equals(response[1])) {
+                    sendData = processPublish(incomingMessage, response, responseAddress, responsePort);
                 }
 
                 if (sendData != null) {
@@ -84,6 +91,19 @@ public class Node {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private byte[] processPublish(String incomingMessage, String[] response, InetAddress responseAddress, int responsePort) {
+        byte[] sendData;
+        log.info("RECEIVE: publish received from '" + responseAddress + ":" + responsePort +
+                "' as '" + incomingMessage + "'");
+        String fileName = response[2];
+        String location = response[3] + ":" + response[4];
+        fileManager.addToFileTable(fileName, location);
+        sendData = prependLengthToMessage("PUBLISH OK").getBytes();
+        log.info("SENT: publish ok sent to '" + responseAddress + ":" + responsePort +
+                "' as '" + incomingMessage + "'");
+        return sendData;
     }
 
     private byte[] processLeaveRequest(String incomingMessage, String[] response, InetAddress responseAddress, int responsePort) {
@@ -140,7 +160,11 @@ public class Node {
     }
 
     private void connectToPeers() {
-        try (DatagramSocket clientSocket = new DatagramSocket();) {
+        executorService.submit(this::tryToConnectPeers);
+    }
+
+    private void tryToConnectPeers() {
+        try (DatagramSocket clientSocket = new DatagramSocket()) {
             for (NodeIdentity peer : peersToConnect) {
                 InetAddress address = InetAddress.getByName(peer.getIpAddress());
                 byte[] receiveData = new byte[1024];
@@ -175,4 +199,23 @@ public class Node {
     }
 
 
+    public void publish(String fileName) {
+        for (NodeIdentity peer : peers) {
+            try (DatagramSocket serverSocket = new DatagramSocket()) {
+                InetAddress address = InetAddress.getByName(peer.getIpAddress());
+                byte[] receiveData = new byte[1024];
+                String message = prependLengthToMessage("PUBLISH " + fileName + " " + nodeIdentity.getIpAddress() + " " + fileServerPort);
+                byte[] sendData = message.getBytes();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, peer.getPort());
+                log.info("SEND: Publish message to '" + peer + "'");
+                serverSocket.send(sendPacket);
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                serverSocket.receive(receivePacket);
+                String responseMessage = new String(receivePacket.getData()).trim();
+                log.info("RECEIVE: " + responseMessage + " from '" + peer + "'");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

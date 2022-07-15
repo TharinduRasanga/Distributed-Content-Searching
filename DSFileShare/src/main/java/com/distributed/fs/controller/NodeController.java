@@ -1,10 +1,7 @@
 package com.distributed.fs.controller;
 
 import com.distributed.fs.service.NodeService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -15,6 +12,11 @@ public class NodeController {
 
     public NodeController(NodeService nodeService) {
         this.nodeService = nodeService;
+    }
+
+    @PostMapping("/publish")
+    public void publishFile(@RequestBody String fileName) {
+        nodeService.publishFile(fileName);
     }
 
     @GetMapping("/search/{name}")

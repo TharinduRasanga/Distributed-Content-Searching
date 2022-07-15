@@ -16,4 +16,6 @@ public class Constants {
     public static final String COMRPLY = "COMRPLY";
     public static final String VERIFIED = "VERIFIED";
     public static final String UNVERIFIED = "UNVERIFIED";
+
+    public static final String PUBLISH = "PUBLISH";
 }
