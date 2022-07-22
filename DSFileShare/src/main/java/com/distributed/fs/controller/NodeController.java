@@ -1,6 +1,7 @@
 package com.distributed.fs.controller;
 
 import com.distributed.fs.service.NodeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Set;
 
 @RestController()
 @RequestMapping("/node")
+@Slf4j
 public class NodeController {
     private final NodeService nodeService;
 
