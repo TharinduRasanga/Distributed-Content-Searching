@@ -85,10 +85,6 @@ public class Node {
                     InetAddress searcherAddress = InetAddress.getByName(host);
                     String searchFilename = getResourceNameFromSearchQuery(response[4]);
                     int currentHopsCount = Integer.parseInt(response[5]);
-                    if (currentHopsCount == 0) {
-                        log.info("DROP: Maximum hops reached hence dropping '" + incomingMessage + "'");
-                        continue;
-                    }
                     Set<String> localMatching = fileManager.getLocalMatching(searchFilename);
                     Set<SearchResult> peerMatching = fileManager.getPeerMatching(searchFilename);
 
@@ -104,8 +100,8 @@ public class Node {
                                 "SEROK " + localMatching.size() + " " + nodeIdentity.getIpAddress()
                                         + " " + fileServerPort + " " + fileNames.toString().trim()
                         ).getBytes();
-                        log.info("FOUND: File found locally : " + responseString);
-                        log.info("Current hops count for '" + incomingMessage + "' is : " + (maxHopCount - currentHopsCount));
+                        log.info("FOUND: File found locally : ");
+                        log.info("Current hops count for '" + incomingMessage + "' is : " + (Integer.parseInt(maxHopCount) - currentHopsCount));
                         DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
                                 Integer.parseInt(searcherPort));
                         serverSocket.send(sendPacket);
@@ -129,12 +125,17 @@ public class Node {
                                     "SEROK " + localMatching.size() + " " + location[0]
                                             + " " + location[1] + " " + names.toString().trim()
                             ).getBytes();
-                            log.info("FOUND: File found in peers : " + responseString);
-                            log.info("Current hops count for '" + incomingMessage + "' is : " + (maxHopCount - currentHopsCount));
+                            log.info("FOUND: File found in file table : ");
+                            log.info("Current hops count for '" + incomingMessage + "' is : " + (Integer.parseInt(maxHopCount) - currentHopsCount));
                             DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
                                     Integer.parseInt(searcherPort));
                             serverSocket.send(sendPacket);
                         }
+                    }
+
+                    if (currentHopsCount - 1 == 0) {
+                        log.info("DROP: Maximum hops reached hence not flood '" + incomingMessage + "'");
+                        continue;
                     }
 
                     // Flood the query to all peers
