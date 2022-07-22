@@ -23,7 +23,13 @@ public class NodeController {
 
     @GetMapping("/search/{name}")
     public Map<String, Set<String>> search(@PathVariable String name) {
-        return nodeService.search(name);
+        long start = System.currentTimeMillis();
+        Map<String, Set<String>> map = nodeService.search(name);
+        long end = System.currentTimeMillis();
+
+        log.info("DURATION: " + (end-start));
+
+        return map;
     }
 
     @PostMapping("/unregister")

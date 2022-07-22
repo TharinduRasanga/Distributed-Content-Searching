@@ -72,11 +72,16 @@ public class Node {
                 int responsePort = incoming.getPort();
 
                 if (response.length >= 6 && Constants.SER.equals(response[1])) {
+
                     String host = response[2];
                     String searcherPort = response[3];
 //                    if (NodeIdentity.of(host, Integer.parseInt(searcherPort)).equals(nodeIdentity)) {
 //                        continue;
 //                    }
+
+                    log.info("RECEIVE: Search query received from '" + responseAddress + ":" +
+                            responsePort + "' as '" + incomingMessage + "'");
+
                     InetAddress searcherAddress = InetAddress.getByName(host);
                     String searchFilename = getResourceNameFromSearchQuery(response[4]);
                     int currentHopsCount = Integer.parseInt(response[5]);
@@ -99,6 +104,8 @@ public class Node {
                                 "SEROK " + localMatching.size() + " " + nodeIdentity.getIpAddress()
                                         + " " + fileServerPort + " " + fileNames.toString().trim()
                         ).getBytes();
+                        log.info("FOUND: File found locally : " + responseString);
+                        log.info("Current hops count for '" + incomingMessage + "' is : " + (maxHopCount - currentHopsCount));
                         DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
                                 Integer.parseInt(searcherPort));
                         serverSocket.send(sendPacket);
@@ -122,6 +129,8 @@ public class Node {
                                     "SEROK " + localMatching.size() + " " + location[0]
                                             + " " + location[1] + " " + names.toString().trim()
                             ).getBytes();
+                            log.info("FOUND: File found in peers : " + responseString);
+                            log.info("Current hops count for '" + incomingMessage + "' is : " + (maxHopCount - currentHopsCount));
                             DatagramPacket sendPacket = new DatagramPacket(localData, localData.length, searcherAddress,
                                     Integer.parseInt(searcherPort));
                             serverSocket.send(sendPacket);
