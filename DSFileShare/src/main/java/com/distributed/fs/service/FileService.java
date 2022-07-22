@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Service
 public class FileService {
@@ -21,5 +22,9 @@ public class FileService {
             return Util.createRandomContentToFile().getBytes();
         }
         throw new ResponseStatusException(HttpStatus.NO_CONTENT, "Not Found");
+    }
+
+    public Set<String> getLocalFileNames() {
+        return fileManager.getLocalFileNames();
     }
 }

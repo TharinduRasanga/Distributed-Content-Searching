@@ -76,4 +76,8 @@ public class FileManager {
         }
         return result;
     }
+
+    public Set<String> getLocalFileNames() {
+        return localFileNames;
+    }
 }

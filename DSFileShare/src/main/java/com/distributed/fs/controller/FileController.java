@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
+
 @RestController
 @RequestMapping("/file")
 public class FileController {
@@ -26,5 +28,10 @@ public class FileController {
                 .contentType(MediaType.parseMediaType("application/octet-stream"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName + ".txt")
                 .body(fileContent);
+    }
+
+    @GetMapping("/local-file-names")
+    public Set<String> getLocalFiles() {
+        return fileService.getLocalFileNames();
     }
 }
